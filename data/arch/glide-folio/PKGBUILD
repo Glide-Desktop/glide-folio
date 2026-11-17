@@ -1,0 +1,49 @@
+pkgname=glide-folio
+pkgver=0.1.r0.g0000000
+pkgrel=1
+pkgdesc="Document viewer of the Glide desktop"
+arch=(x86_64)
+url="https://github.com/Glide-Desktop/glide-folio"
+license=(GPL-3.0-or-later)
+depends=(
+    glibc gcc-libs libglvnd vulkan-icd-loader wayland libxkbcommon hicolor-icon-theme
+    glide-configd dbus xdg-utils
+    ghostscript djvulibre libgxps libarchive 7zip unrar
+    tesseract tesseract-data-eng tesseract-data-ukr
+)
+optdepends=(
+    'libreoffice-fresh: Office documents'
+    'xdg-desktop-portal: printing through the Print portal'
+)
+makedepends=(git cargo pkgconf)
+options=(!lto !debug)
+_git="${GLIDE_GIT:-https://github.com/Glide-Desktop}"
+_target="${GLIDE_CARGO_TARGET:-target}"
+source=("$pkgname::git+$_git/glide-folio.git")
+sha256sums=('SKIP')
+
+pkgver() {
+    cd "$pkgname"
+    printf '0.1.r%s.g%s' "$(git rev-list --count HEAD)" "$(git rev-parse --short=7 HEAD)"
+}
+
+prepare() {
+    cd "$pkgname"
+    export RUSTUP_TOOLCHAIN=stable
+    cargo fetch --locked --target "$(rustc -vV | sed -n 's/host: //p')"
+}
+
+build() {
+    cd "$pkgname"
+    export RUSTUP_TOOLCHAIN=stable CARGO_TARGET_DIR="$_target"
+    cargo build --frozen --release -p glide-folio
+}
+
+package() {
+    cd "$pkgname"
+    install -Dm755 $_target/release/glide-folio "$pkgdir/usr/bin/glide-folio"
+    install -Dm644 data/glide-folio.desktop "$pkgdir/usr/share/applications/glide-folio.desktop"
+    install -Dm644 data/glide-folio.svg "$pkgdir/usr/share/icons/hicolor/scalable/apps/glide-folio.svg"
+    install -Dm644 data/defaults/folio.json "$pkgdir/usr/share/glide/defaults/folio.json"
+    install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}
